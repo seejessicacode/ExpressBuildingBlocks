@@ -1,6 +1,14 @@
 var request = require('supertest');
 var app = require('./app');
 
+var client = require('redis').createClient();
+client.select('test'.length);
+client.flushdb();
+
+client.hset('cities', 'Lotopia', 'Lotopia desc');
+client.hset('cities', 'Caspiana', 'Caspiana desc');
+client.hset('cities', 'Indigo', 'Indigo desc');
+
 describe('Requests to the root path', function() {
 
   it('Returns a 200 status code', function(done) {
@@ -62,4 +70,3 @@ describe('Creating new cities', function() {
   });
 
 });
-
