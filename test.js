@@ -106,3 +106,33 @@ describe('Deleting cities', function() {
   });
 
 });
+
+describe('Shows city info', function() {
+
+  before(function() {
+    client.hset('cities', 'Bananas', 'a tasty fruit');
+  });
+
+  after(function() {
+    client.flushdb();
+  });
+
+  it('Returns 200 status code', function(done) {
+    request(app)
+      .get('/cities/Bananas')
+      .expect(200, done);
+  });
+
+  it('Returns HTML format', function(done) {
+    request(app)
+      .get('/cities/Bananas')
+      .expect('Content-Type', /html/, done);
+  });
+
+  it('Returns information for given city', function(done) {
+    request(app)
+      .get('/cities/Bananas')
+      .expect(/tasty/, done);
+  });
+
+});
