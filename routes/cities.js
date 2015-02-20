@@ -1,22 +1,23 @@
 var express = require('express');
 var bodyParser = require('body-parser');
-var client = require('redis').createClient();
+var client = require('mongodb').MongoClient;
 
 var urlencode = bodyParser.urlencoded({ extended: false });
 var router = express.Router();
-
-/*client.on('error', function (err) {
-  console.log('Error ' + err);
-});*/
-
-client.select((process.env.NODE_ENV || 'development').length);
+var dbConnection = 'mongodb://127.0.0.1:27017/' + (process.env.NODE_ENV || 'development');
 
 router.route('/')
   .get(function(req, res) {
-    client.hkeys('cities', function (error, names) {
-      if (error) throw error;
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
 
-      res.json(names);
+      var collection = db.collection('cities');
+
+      collection.find({}, {'name': true, '_id': false}).toArray(function(err, names) {
+        if (err) throw err;
+
+        res.json(names);
+      });
     });
   })
   .post(urlencode, function(req, res) {
@@ -26,30 +27,53 @@ router.route('/')
       res.sendStatus(400);
     }
     else {
-      client.hset('cities', newCity.name, newCity.description, function(error) {
-        if (error) throw error;
+      client.connect(dbConnection, function(err, db) {
+        if(err) throw err;
 
-        res.status(201).json(newCity.name);
+        var collection = db.collection('cities');
+
+        collection.insert({ name: newCity.name, description: newCity.description }, function(err, objects) {
+          if(err) throw err;
+
+          res.status(201).json(newCity);
+        });
       });
     }
   });
 
 router.route('/:name')
   .get(urlencode, function(req, res) {
-    client.hget('cities', req.params.name, function(error, desc) {
-      if (error) throw error;
+    client.connect(
+      dbConnection,
+      function(err, db) {
+        if(err) throw err;
 
-      res.render('show.ejs',
-        {
-          city: { name: req.params.name, description: desc }
-        });
-    });
+        var collection = db.collection('cities');
+
+        collection.findOne(
+          { name: req.params.name },
+          { 'description': true, '_id': false },
+          function(err, desc) {
+            if (err) throw err;
+
+            res.render('show.ejs',
+              {
+                city: { name: req.params.name, description: desc.description }
+              });
+          });
+      });
   })
   .delete(urlencode, function(req, res) {
-    client.hdel('cities', req.params.name, function(error) {
-      if (error) throw error;
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
 
-      res.sendStatus(204);
+      var collection = db.collection('cities');
+
+      collection.remove({ name: req.params.name }, function(err, objects) {
+        if(err) throw err;
+
+        res.sendStatus(204);
+      });
     });
   });
 

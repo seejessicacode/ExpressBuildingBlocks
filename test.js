@@ -1,8 +1,8 @@
 var request = require('supertest');
 var app = require('./app');
 
-var client = require('redis').createClient();
-client.select('test'.length);
+var client = require('mongodb').MongoClient;
+var dbConnection = 'mongodb://127.0.0.1:27017/test';
 
 describe('Requests to the root path', function() {
 
@@ -29,15 +29,33 @@ describe('Requests to the root path', function() {
 describe('Listing cities on /cities', function() {
 
   before(function() {
-    client.flushdb();
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
 
-    client.hset('cities', 'Lotopia', 'Lotopia desc');
-    client.hset('cities', 'Caspiana', 'Caspiana desc');
-    client.hset('cities', 'Indigo', 'Indigo desc');
+      var collection = db.collection('cities');
+
+      collection.remove({}, function(err, result) {
+        if(err) throw err;
+
+        collection.insert(
+          [{ name: 'Lotopia', description: 'Lotopia desc' },
+           { name: 'Caspiana', description: 'Caspiana desc' },
+           { name: 'Indigo', description: 'Indigo desc' }],
+          function(err, objects) { if(err) throw err; });
+      });
+    });
   });
 
   after(function() {
-    client.flushdb();
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
+
+      var collection = db.collection('cities');
+
+      collection.remove({}, function(err, result) {
+        if(err) throw err;
+      });
+    });
   });
 
   it('Returns 200 status code', function(done) {
@@ -55,7 +73,7 @@ describe('Listing cities on /cities', function() {
   it('Returns initial cities', function(done) {
     request(app)
       .get('/cities')
-      .expect(JSON.stringify(['Lotopia', 'Caspiana', 'Indigo']), done);
+      .expect(JSON.stringify([{name:'Lotopia'}, {name:'Caspiana'}, {name:'Indigo'}]), done);
   });
 
 });
@@ -63,7 +81,15 @@ describe('Listing cities on /cities', function() {
 describe('Creating new cities', function() {
 
   after(function() {
-    client.flushdb();
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
+
+      var collection = db.collection('cities');
+
+      collection.remove({}, function(err, result) {
+        if(err) throw err;
+      });
+    });
   });
 
   it('Returns a 201 status code', function(done) {
@@ -92,11 +118,27 @@ describe('Creating new cities', function() {
 describe('Deleting cities', function() {
 
   before(function() {
-    client.hset('cities', 'Bananas', 'a tasty fruit');
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
+
+      var collection = db.collection('cities');
+
+      collection.insert(
+        { name: 'Bananas', description: 'a tasty fruit' },
+        function(err, objects) { if(err) throw err; });
+    });
   });
 
   after(function() {
-    client.flushdb();
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
+
+      var collection = db.collection('cities');
+
+      collection.remove({}, function(err, result) {
+        if(err) throw err;
+      });
+    });
   });
 
   it('Returns a 204 status code', function(done) {
@@ -110,11 +152,27 @@ describe('Deleting cities', function() {
 describe('Shows city info', function() {
 
   before(function() {
-    client.hset('cities', 'Bananas', 'a tasty fruit');
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
+
+      var collection = db.collection('cities');
+
+      collection.insert(
+        { name: 'Bananas', description: 'a tasty fruit' },
+        function(err, objects) { if(err) throw err; });
+    });
   });
 
   after(function() {
-    client.flushdb();
+    client.connect(dbConnection, function(err, db) {
+      if(err) throw err;
+
+      var collection = db.collection('cities');
+
+      collection.remove({}, function(err, result) {
+        if(err) throw err;
+      });
+    });
   });
 
   it('Returns 200 status code', function(done) {
